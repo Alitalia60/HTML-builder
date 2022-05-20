@@ -4,8 +4,8 @@ const { stdout } = require('process');
 const uri = path.resolve(__dirname, 'text.txt');
 
 const readStrm = fs.createReadStream(uri);
-readStrm.setEncoding('utf-8');
+// readStrm.setEncoding('utf-8');
 readStrm.read();
-readStrm.on('data', (chunk) =>{
-  stdout.write(chunk);
-} );
+readStrm.on('data', (chunk) => {
+    stdout.write(chunk);
+});
