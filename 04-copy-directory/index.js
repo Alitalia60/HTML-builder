@@ -7,6 +7,7 @@ const toFolder = path.resolve(__dirname, 'files-copy');
 //check existing folder
 fs.access(toFolder, (err) => {
   if (err) {
+    //no such dir
     try {
       //attemp create folder
       myCreateDir(toFolder);
