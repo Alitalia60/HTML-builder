@@ -1,39 +1,65 @@
 const fs = require('fs');
 const path = require('path');
 
+//dst
+const distFolder = path.resolve(__dirname, 'project-dist');
+const distHtml = path.join(distFolder, 'index.html');
+const assetsFolder = path.join(distFolder, 'assets');
+const styleFolder = path.join(distFolder, 'styles');
 
 //src
 const componentsFolder = path.resolve(__dirname, 'components');
 const templateHtml = path.resolve(__dirname, 'template.html');
-const assetsFolder = path.join(distFolder, 'assets');
-const styleFolder = path.join(distFolder, 'styles');
 
-//dst
-const distFolder = path.resolve(__dirname, 'project-dist');
-const distHtml = path.join(distFolder, 'index.html');
+const objComponents = {};
 
 //1. create folder **project-dist**
-fs.mkdir(distFolder,(err)=>{
+//if exist folder **project-dist**
+fs.mkdir(distFolder, (err) => {
+
+  //!! ********
   if (err) {
-    throw ('can\'t create folder', err);
+    if (err.code !== 'EEXIST') {
+      throw ("can't make folder", distFolder, err);
+    }
   }
-  createHtml();  
-});
 
-//2. replace tegs in index.htmp
-function createHtml(){
-  const rs = fs.createReadStream(templateHtml,'utf-8');
+  //!! ********
+  const rs = fs.createReadStream(templateHtml, 'utf-8');
+  const distHtmlWS = fs.createWriteStream(distHtml, 'utf-8');
+
+  let temlateContent = '';
   rs.read();
-  rs.on('data', (data)=>{
-    ['header', 'articles', 'footer'].forEach(tag => {
-      if (data.includes(`{{${tag}}}`)) {
-        data.replace(`{{${tag}}}`, fromSource(tag));
-      }
-    });
+  rs.on('data', (templateChunk) => {
+    temlateContent += templateChunk;
   });
-}
+  rs.on('end', () => {
+    ['header', 'articles', 'foter'].forEach((tag) => {
+      if (temlateContent.includes(`{{${tag}}}`)) {
+        console.log('founded in template =', `{{${tag}}}`);
 
-function fromSource(tag) {
-  const comp = fs.createReadStream(path.join(componentsFolder, tag));
-  comp.read();
-}
+        const comp = fs.createReadStream(
+          path.join(componentsFolder, `${tag}.html`), { encoding: 'utf-8' }
+        );
+        let componentContent = '';
+        comp.read();
+        comp.on('data', (componentChunk) => {
+          componentContent += componentChunk
+        })
+        comp.on('end', () => {
+          console.log('***********************');
+          console.log('replacing tag=', `{{${tag}}}`);
+          console.log('========================');
+          console.log(componentContent);
+          temlateContent.replace(`{{${tag}}}`, componentContent);
+        });
+      };
+    });
+    console.log('++++++++++++++++++++++');
+    console.log(temlateContent);
+
+    distHtmlWS.app(temlateContent);
+
+
+  });
+});
