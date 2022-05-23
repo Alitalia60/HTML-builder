@@ -4,19 +4,15 @@ const fs = require('fs');
 const fromFolder = path.resolve(__dirname, 'files');
 const toFolder = path.resolve(__dirname, 'files-copy');
 
-//check existing folder
 fs.access(toFolder, (err) => {
   if (err) {
-    //no such dir
     try {
-      //attemp create folder
       myCreateDir(toFolder);
     } catch (error) {
       throw console.log('my error creating dir', error);
     }
   }
   try {
-    //attemp copy folder
     myCopyDir(fromFolder, toFolder);
   } catch (error) {
     throw console.log('my error copying dir', error);

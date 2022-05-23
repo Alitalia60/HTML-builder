@@ -10,7 +10,6 @@ fs.readdir(secretFolder, { withFileTypes: true, encoding: 'utf-8' }, (err, files
   for (const file of files) {
     if (file.isFile()) {
       let fileURI = path.join(secretFolder, file.name);
-      let size = 0;
       fs.stat(fileURI, (err, stats) => {
         if (err) {
           throw console.log('myError stats', err.code);
@@ -21,6 +20,4 @@ fs.readdir(secretFolder, { withFileTypes: true, encoding: 'utf-8' }, (err, files
 
     }
   }
-})
-
-/* <имя файла>-<расширение файла>-<вес файла> */
+});
