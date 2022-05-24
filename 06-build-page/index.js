@@ -16,11 +16,10 @@ const srcTemplateHtml = path.resolve(__dirname, 'template.html');
 
 const distHtmlWS = fs.createWriteStream(distHtml, 'utf-8');
 
+console.log('task is not complete');
 createDir(distStyleFolder, false, mergeStyles);
 createDir(distAssetsFolder, false, copyAssets);
-console.log('task is not done');
-process.exit();
-// createDir(makeHTML, false, makeHTML);
+// createDir(distProjectFolder, false, makeHTML);
 
 function createDir(folderName, doItRecursive, callBack) {
   fs.access(folderName, (err) => {
@@ -40,8 +39,6 @@ function createDir(folderName, doItRecursive, callBack) {
 
 //!! copy styles from src to dst
 function mergeStyles() {
-  console.log('merge Styles begin');
-
   fs.readdir(
     srcStyleFolder, { withFileTypes: false, encoding: 'utf-8' },
     (err, files) => {
@@ -88,8 +85,6 @@ function copyFiles(from, to) {
 
 //!! copy assets
 function copyDirAssets(srcURI, distURI) {
-  console.log('copying assets');
-
   fs.readdir(srcURI, { withFileTypes: true, encoding: 'utf-8' },
     (err, files) => {
       if (err) {
@@ -97,8 +92,6 @@ function copyDirAssets(srcURI, distURI) {
           throw console.log('myError copyAssets readdir', err);
         }
       }
-
-      console.log(files);
 
       for (const file of files) {
         const srcFileURI = path.join(srcURI, file.name);
@@ -120,70 +113,61 @@ function copyDirAssets(srcURI, distURI) {
 function copyAssets() {
   copyDirAssets(srcAssetsFolder, distAssetsFolder);
 }
+
 //!! generator
-const generetor = function*(array) {
-  for (const item of array) {
-    yield item;
+async function* tagReplacing(tags, templateContent) {
+  for (const tag of tags) {
+    await new Promise((resolve) => {
+      if (templateContent.includes(`{{${tag}}}`)) {
+        console.log('founded in template =', `{{${tag}}}`);
+        const comp = fs.createReadStream(
+          path.join(srcComponentsFolder, `${tag}.html`), { encoding: 'utf-8' }
+        );
+        let componentContent = '';
+
+        comp.read();
+
+        comp.on('data', (componentChunk) => {
+          componentContent += componentChunk
+        })
+
+        comp.on('end', () => {
+          try {
+            templateContent = templateContent.replace(`{{${tag}}}`, componentContent);
+            console.log('replacing tag ', `{{${tag}}}`);
+          } catch (error) {
+            throw console.log('mtError can\'t replace text', err);
+          }
+        });
+      }
+      resolve(console.log('html ready'));
+    });
+    yield tag;
   }
 }
 
+
+async function doit(gen) {
+  for await (const file of gen) {
+    console.log(file);
+  };
+
+  // wsBundle.write()
+};
+
 function makeHTML() {
+  console.log(srcTemplateHtml);
   const rs = fs.createReadStream(srcTemplateHtml, 'utf-8');
   let templateContent = '';
   rs.read();
 
   rs.on('data', (templateChunk) => {
     templateContent += templateChunk;
-    console.log('rs.on data');
   });
 
   rs.on('end', () => {
-    console.log('rs.on end');
-    ['header', 'articles', 'footer'].forEach((tag) => {
-      if (templateContent.includes(`{{${tag}}}`)) {
-        console.log('founded in template =', `{{${tag}}}`);
-        // const comp = fs.createReadStream(
-        //   path.join(srcComponentsFolder, `${tag}.html`), { encoding: 'utf-8' }
-        // );
-        // let componentContent = '';
-
-        // comp.read();
-
-        // comp.on('data', (componentChunk) => {
-        //   componentContent += componentChunk
-        // })
-
-        // comp.on('end', () => {
-        //   try {
-        //     templateContent = templateContent.replace(`{{${tag}}}`, componentContent);
-        //     console.log('replacing tag ', `{{${tag}}}`);
-        //   } catch (error) {
-        //     throw console.log('mtError can\'t replace text', err);
-        //   }
-        // });
-      }
-    });
+    const tags = ['header', 'articles', 'footer'];
+    const gen = tagReplacing(tags, templateContent);
+    doit(gen)
   });
 }
-
-// async function replaceTag(tagName) {
-// const comp = fs.createReadStream(
-//   path.join(srcComponentsFolder, `${tag}.html`), { encoding: 'utf-8' }
-// );
-// let componentContent = '';
-
-// comp.read();
-
-// comp.on('data', (componentChunk) => {
-//   componentContent += componentChunk;
-// });
-
-// comp.on('end', () => {
-//   try {
-//     templateContent = templateContent.replace(`{{${tag}}}`, componentContent);
-//     console.log('replacing tag ', `{{${tag}}}`);
-//   } catch (error) {
-//     throw console.log('mtError can\'t replace text', err);
-//   }
-//   return templateContent;
-// })
