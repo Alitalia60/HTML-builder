@@ -13,11 +13,27 @@ fs.access(toFolder, (err) => {
     }
   }
   try {
+    clearDir(toFolder);
     myCopyDir(fromFolder, toFolder);
   } catch (error) {
     throw console.log('my error copying dir', error);
   }
 });
+
+function clearDir(folderName){
+  fs.readdir(folderName, (err, files)=>{
+    if (err) {
+      throw console.log('error clearDir', err);
+    }
+    for (const file of files) {
+      fs.unlink(path.join(folderName, file), (err)=>{
+        if (err) {
+          throw console.log('error delete files', err);
+        }
+      });
+    }
+  });
+}
 
 function myCreateDir(folderName) {
   fs.mkdir(folderName, { recursive: false }, (err) => {
