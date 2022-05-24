@@ -13,8 +13,6 @@ const srcStyleFolder = path.resolve(__dirname, 'styles');
 const srcComponentsFolder = path.resolve(__dirname, 'components');
 const srcTemplateHtml = path.resolve(__dirname, 'template.html');
 
-
-
 mergeStyles();
 createDir(distAssetsFolder, false, copyAssets);
 createDir(distProjectFolder, false, makeHTML);
@@ -37,7 +35,8 @@ function createDir(folderName, doItRecursive, callBack) {
 //!! copy styles from src to dst
 function mergeStyles() {
   fs.readdir(
-    srcStyleFolder, { withFileTypes: false, encoding: 'utf-8' },
+    srcStyleFolder,
+    { withFileTypes: false, encoding: 'utf-8' },
     (err, files) => {
       if (err) {
         if (err.code !== 'ENOENT') {
@@ -61,14 +60,12 @@ function mergeStyles() {
   );
 }
 
-
 function makeFolder(folderURI) {
-  fs.mkdir(folderURI, { recursive: true },
-    (err) => {
-      if (err) {
-        throw console.log('myError mkdir ', srcAssetsFolder);
-      }
-    });
+  fs.mkdir(folderURI, { recursive: true }, (err) => {
+    if (err) {
+      throw console.log('myError mkdir ', srcAssetsFolder);
+    }
+  });
 }
 
 function copyFiles(from, to) {
@@ -79,10 +76,11 @@ function copyFiles(from, to) {
   });
 }
 
-
 //!! copy assets
 function copyDirAssets(srcURI, distURI) {
-  fs.readdir(srcURI, { withFileTypes: true, encoding: 'utf-8' },
+  fs.readdir(
+    srcURI,
+    { withFileTypes: true, encoding: 'utf-8' },
     (err, files) => {
       if (err) {
         if (err.code !== 'ENOENT') {
@@ -117,7 +115,8 @@ async function* tagReplacing(tags, templateContent) {
     await new Promise((resolve) => {
       if (templateContent.includes(`{{${tag}}}`)) {
         const comp = fs.createReadStream(
-          path.join(srcComponentsFolder, `${tag}.html`), { encoding: 'utf-8' }
+          path.join(srcComponentsFolder, `${tag}.html`),
+          { encoding: 'utf-8' }
         );
         let componentContent = '';
 
@@ -129,12 +128,15 @@ async function* tagReplacing(tags, templateContent) {
 
         comp.on('end', () => {
           try {
-            templateContent = templateContent.replace(`{{${tag}}}`, componentContent);
+            templateContent = templateContent.replace(
+              `{{${tag}}}`,
+              componentContent
+            );
             const distHtmlWS = fs.createWriteStream(distHtml, 'utf-8');
             distHtmlWS.write(templateContent);
             resolve();
           } catch (err) {
-            throw console.log('mtError can\'t replace text', err);
+            throw console.log("mtError can't replace text", err);
           }
         });
       }
@@ -142,7 +144,6 @@ async function* tagReplacing(tags, templateContent) {
     yield tag;
   }
 }
-
 
 async function doit(gen) {
   for await (const file of gen) {
@@ -160,9 +161,21 @@ function makeHTML() {
   });
 
   rs.on('end', () => {
-    const tags = ['header', 'articles', 'footer'];
-    const gen = tagReplacing(tags, templateContent);
-    doit(gen);
-    
+    const tags = [];
+    fs.readdir(
+      srcComponentsFolder,
+      { withFileTypes: true, encoding: 'utf-8' },
+      (err, files) => {
+        for (const file of files) {
+          if (file.isFile()) {
+            if (path.extname(file.name).toLocaleLowerCase() === '.html') {
+              tags.push(path.basename(file.name, '.html'));
+            }
+          }
+        }
+        const gen = tagReplacing(tags, templateContent);
+        doit(gen);
+      }
+    );
   });
 }
