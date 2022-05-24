@@ -17,20 +17,19 @@ const srcTemplateHtml = path.resolve(__dirname, 'template.html');
 const distHtmlWS = fs.createWriteStream(distHtml, 'utf-8');
 
 createDir(distStyleFolder, false, mergeStyles);
-
-console.log('task is noy done');
+createDir(distAssetsFolder, false, copyAssets);
+console.log('task is not done');
 process.exit();
-// createDir(distAssetsFolder, false, copyAssets);
 // createDir(makeHTML, false, makeHTML);
 
 function createDir(folderName, doItRecursive, callBack) {
   fs.access(folderName, (err) => {
     if (err) {
       if (err.code === 'ENOENT') {
-        console.log('creating folder', folderName);
+        console.log('creating file', folderName);
         fs.mkdir(folderName, { recursive: doItRecursive }, (err) => {
           if (err) {
-            throw console.log(' myError creating folder ', folderName, err);
+            throw console.log(' myError creating file ', folderName, err);
           }
         });
       }
@@ -44,7 +43,7 @@ function mergeStyles() {
   console.log('merge Styles begin');
 
   fs.readdir(
-    srcStyleFolder, { withFileTypes: true, encoding: 'utf-8' },
+    srcStyleFolder, { withFileTypes: false, encoding: 'utf-8' },
     (err, files) => {
       if (err) {
         if (err.code !== 'ENOENT') {
@@ -68,56 +67,64 @@ function mergeStyles() {
   );
 }
 
+
+function makeFolder(folderURI) {
+  fs.mkdir(folderURI, { recursive: true },
+    (err) => {
+      if (err) {
+        throw console.log('myError mkdir ', srcAssetsFolder);
+      }
+    });
+}
+
+function copyFiles(from, to) {
+  fs.copyFile(from, to, (err) => {
+    if (err) {
+      throw console.log('my error copy file', file, err);
+    }
+  })
+}
+
+
 //!! copy assets
-function copyAssets() {
+function copyDirAssets(srcURI, distURI) {
   console.log('copying assets');
 
-  fs.readdir(
-    srcAssetsFolder, { withFileTypes: true, encoding: 'utf-8' },
+  fs.readdir(srcURI, { withFileTypes: true, encoding: 'utf-8' },
     (err, files) => {
       if (err) {
         if (err.code !== 'ENOENT') {
           throw console.log('myError copyAssets readdir', err);
         }
       }
-      console.log('get files', files);
-      for (const file of files) {
-        console.log('prrocess file ', file.name);
-        fs.stat(path.join(srcAssetsFolder, file.name), (err, stats) => {
-          if (err) {
-            throw console.log('myError fs.stat', file.name);
-          }
 
+      console.log(files);
+
+      for (const file of files) {
+        const srcFileURI = path.join(srcURI, file.name);
+        const dstFileURI = path.join(distURI, file.name);
+        fs.stat(srcFileURI, (err, stats) => {
           if (stats.isDirectory()) {
-            fs.mkdir(
-              path.join(distAssetsFolder, file.name), { recursive: true },
-              (err) => {
-                console.log('readed is folder ', file.name);
-                if (err) {
-                  throw console.log('myError mkdir ', srcAssetsFolder);
-                }
-              }
-            );
-          } else {
-            console.log(
-              'copy file',
-              path.join(srcAssetsFolder, file),
-              path.join(distAssetsFolder, file)
-            );
-            fs.copyFile(
-              path.join(srcAssetsFolder, file),
-              path.join(distAssetsFolder, file),
-              (err) => {
-                if (err) {
-                  throw console.log('my error copy file', file, err);
-                }
-              }
-            );
+            makeFolder(dstFileURI);
+            copyDirAssets(srcFileURI, dstFileURI);
+          };
+          if (stats.isFile()) {
+            copyFiles(srcFileURI, dstFileURI);
           }
         });
       }
     }
   );
+}
+
+function copyAssets() {
+  copyDirAssets(srcAssetsFolder, distAssetsFolder);
+}
+//!! generator
+const generetor = function*(array) {
+  for (const item of array) {
+    yield item;
+  }
 }
 
 function makeHTML() {
