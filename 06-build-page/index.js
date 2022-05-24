@@ -136,7 +136,7 @@ async function* tagReplacing(tags, templateContent) {
             distHtmlWS.write(templateContent);
             resolve();
           } catch (err) {
-            throw console.log("mtError can't replace text", err);
+            throw console.log('mtError can\'t replace text', err);
           }
         });
       }
