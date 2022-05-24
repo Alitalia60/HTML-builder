@@ -5,7 +5,6 @@ const path = require('path');
 const distProjectFolder = path.resolve(__dirname, 'project-dist');
 const distHtml = path.join(distProjectFolder, 'index.html');
 const distAssetsFolder = path.join(distProjectFolder, 'assets');
-const distStyleFolder = path.join(distProjectFolder, 'styles');
 
 //src
 
@@ -14,18 +13,16 @@ const srcStyleFolder = path.resolve(__dirname, 'styles');
 const srcComponentsFolder = path.resolve(__dirname, 'components');
 const srcTemplateHtml = path.resolve(__dirname, 'template.html');
 
-const distHtmlWS = fs.createWriteStream(distHtml, 'utf-8');
 
-console.log('task is not complete');
-createDir(distStyleFolder, false, mergeStyles);
+
+mergeStyles();
 createDir(distAssetsFolder, false, copyAssets);
-// createDir(distProjectFolder, false, makeHTML);
+createDir(distProjectFolder, false, makeHTML);
 
 function createDir(folderName, doItRecursive, callBack) {
   fs.access(folderName, (err) => {
     if (err) {
       if (err.code === 'ENOENT') {
-        console.log('creating file', folderName);
         fs.mkdir(folderName, { recursive: doItRecursive }, (err) => {
           if (err) {
             throw console.log(' myError creating file ', folderName, err);
@@ -48,7 +45,7 @@ function mergeStyles() {
         }
       }
       const wsBundle = fs.createWriteStream(
-        path.join(distStyleFolder, 'style.css'),
+        path.join(distProjectFolder, 'style.css'),
         'utf-8'
       );
       for (const file of files) {
@@ -77,9 +74,9 @@ function makeFolder(folderURI) {
 function copyFiles(from, to) {
   fs.copyFile(from, to, (err) => {
     if (err) {
-      throw console.log('my error copy file', file, err);
+      throw console.log('my error copy file', err);
     }
-  })
+  });
 }
 
 
@@ -100,7 +97,7 @@ function copyDirAssets(srcURI, distURI) {
           if (stats.isDirectory()) {
             makeFolder(dstFileURI);
             copyDirAssets(srcFileURI, dstFileURI);
-          };
+          }
           if (stats.isFile()) {
             copyFiles(srcFileURI, dstFileURI);
           }
@@ -119,7 +116,6 @@ async function* tagReplacing(tags, templateContent) {
   for (const tag of tags) {
     await new Promise((resolve) => {
       if (templateContent.includes(`{{${tag}}}`)) {
-        console.log('founded in template =', `{{${tag}}}`);
         const comp = fs.createReadStream(
           path.join(srcComponentsFolder, `${tag}.html`), { encoding: 'utf-8' }
         );
@@ -128,19 +124,20 @@ async function* tagReplacing(tags, templateContent) {
         comp.read();
 
         comp.on('data', (componentChunk) => {
-          componentContent += componentChunk
-        })
+          componentContent += componentChunk;
+        });
 
         comp.on('end', () => {
           try {
             templateContent = templateContent.replace(`{{${tag}}}`, componentContent);
-            console.log('replacing tag ', `{{${tag}}}`);
-          } catch (error) {
+            const distHtmlWS = fs.createWriteStream(distHtml, 'utf-8');
+            distHtmlWS.write(templateContent);
+            resolve();
+          } catch (err) {
             throw console.log('mtError can\'t replace text', err);
           }
         });
       }
-      resolve(console.log('html ready'));
     });
     yield tag;
   }
@@ -150,13 +147,10 @@ async function* tagReplacing(tags, templateContent) {
 async function doit(gen) {
   for await (const file of gen) {
     console.log(file);
-  };
-
-  // wsBundle.write()
-};
+  }
+}
 
 function makeHTML() {
-  console.log(srcTemplateHtml);
   const rs = fs.createReadStream(srcTemplateHtml, 'utf-8');
   let templateContent = '';
   rs.read();
@@ -168,6 +162,7 @@ function makeHTML() {
   rs.on('end', () => {
     const tags = ['header', 'articles', 'footer'];
     const gen = tagReplacing(tags, templateContent);
-    doit(gen)
+    doit(gen);
+    
   });
 }
