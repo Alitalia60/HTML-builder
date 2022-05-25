@@ -7,7 +7,6 @@ const distHtml = path.join(distProjectFolder, 'index.html');
 const distAssetsFolder = path.join(distProjectFolder, 'assets');
 
 //src
-
 const srcAssetsFolder = path.resolve(__dirname, 'assets');
 const srcStyleFolder = path.resolve(__dirname, 'styles');
 const srcComponentsFolder = path.resolve(__dirname, 'components');
@@ -34,30 +33,41 @@ function createDir(folderName, doItRecursive, callBack) {
 
 //!! copy styles from src to dst
 function mergeStyles() {
-  fs.readdir(
-    srcStyleFolder,
-    { withFileTypes: false, encoding: 'utf-8' },
-    (err, files) => {
-      if (err) {
-        if (err.code !== 'ENOENT') {
-          throw console.log('myError copyStyles readdir', err);
-        }
-      }
-      const wsBundle = fs.createWriteStream(
-        path.join(distProjectFolder, 'style.css'),
-        'utf-8'
-      );
-      for (const file of files) {
-        if (path.extname(file) === '.css') {
-          const rs = fs.createReadStream(
-            path.join(srcStyleFolder, file),
-            'utf-8'
-          );
-          rs.pipe(wsBundle);
-        }
+  const distStyleBundle = path.join(distProjectFolder, 'style.css');
+
+  fs.access(distStyleBundle, (errorAccess) => {
+    if (errorAccess) {
+      if (errorAccess.code !== 'ENOENT') {
+        fs.rm(distStyleBundle, (errorRm) => {
+          if (errorRm) {
+            throw console.log('1. myError rm style.css <mergeStyles>', errorRm.code);
+          }
+        });
       }
     }
-  );
+
+    fs.readdir(
+      srcStyleFolder,
+      { withFileTypes: false, encoding: 'utf-8' },
+      (err, files) => {
+        if (err) {
+          if (err.code !== 'ENOENT') {
+            throw console.log('myError <mergeStyles> readdir', err);
+          }
+        }
+        const wsBundle = fs.createWriteStream(distStyleBundle, 'utf-8');
+        for (const file of files) {
+          if (path.extname(file) === '.css') {
+            const rs = fs.createReadStream(
+              path.join(srcStyleFolder, file),
+              'utf-8'
+            );
+            rs.pipe(wsBundle);
+          }
+        }
+      }
+    );
+  });
 }
 
 function makeFolder(folderURI) {
@@ -109,52 +119,6 @@ function copyAssets() {
   copyDirAssets(srcAssetsFolder, distAssetsFolder);
 }
 
-//!! generator
-async function* tagReplacing(tags, templateContent) {
-  for (const tag of tags) {
-    await new Promise((resolve) => {
-      if (templateContent.includes(`{{${tag}}}`)) {
-        const comp = fs.createReadStream(
-          path.join(srcComponentsFolder, `${tag}.html`),
-          { encoding: 'utf-8' }
-        );
-        let componentContent = '';
-
-        comp.read();
-
-        comp.on('data', (componentChunk) => {
-          componentContent += componentChunk;
-        });
-
-        comp.on('end', () => {
-          try {
-            templateContent = templateContent.replace(
-              `{{${tag}}}`,
-              componentContent
-            );
-
-            console.log('create ws');
-            const distHtmlWS = fs.createWriteStream(distHtml, 'utf-8');
-            distHtmlWS.pipe(templateContent);
-            resolve();
-          } catch (err) {
-            throw console.log("mtError can't replace text", err);
-          }
-        });
-      }
-    });
-    yield tag;
-  }
-}
-
-async function doit(gen) {
-  console.log('doit');
-
-  for await (const file of gen) {
-    console.log(file);
-  }
-}
-
 function makeHTML() {
   let tags = [];
   fs.readdir(
@@ -178,7 +142,6 @@ function makeHTML() {
           throw console.log('error copyFile', err);
         }
         fs.readFile(distHtml, 'utf-8', (err, content) => {
-
           if (err) {
             throw console.log('error readfile', err);
           }
@@ -188,7 +151,6 @@ function makeHTML() {
                 path.join(srcComponentsFolder, `${tag}.html`),
                 'utf-8',
                 (err, data) => {
-
                   if (err) {
                     throw console.log('error readFile', err);
                   }
