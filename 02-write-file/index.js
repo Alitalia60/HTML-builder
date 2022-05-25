@@ -19,4 +19,4 @@ inOut.on('line', (chunk) => {
   writeStream.write(chunk);
 });
 
-process.on('exit', () => console.log('File created ', uri));
+process.on('exit', () => console.log(`That's all. File created = `, uri));
