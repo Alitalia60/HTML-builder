@@ -132,11 +132,13 @@ async function* tagReplacing(tags, templateContent) {
               `{{${tag}}}`,
               componentContent
             );
+
+            console.log('create ws');
             const distHtmlWS = fs.createWriteStream(distHtml, 'utf-8');
-            distHtmlWS.write(templateContent);
+            distHtmlWS.pipe(templateContent);
             resolve();
           } catch (err) {
-            throw console.log('mtError can\'t replace text', err);
+            throw console.log("mtError can't replace text", err);
           }
         });
       }
@@ -146,36 +148,65 @@ async function* tagReplacing(tags, templateContent) {
 }
 
 async function doit(gen) {
+  console.log('doit');
+
   for await (const file of gen) {
     console.log(file);
   }
 }
 
 function makeHTML() {
-  const rs = fs.createReadStream(srcTemplateHtml, 'utf-8');
-  let templateContent = '';
-  rs.read();
-
-  rs.on('data', (templateChunk) => {
-    templateContent += templateChunk;
-  });
-
-  rs.on('end', () => {
-    const tags = [];
-    fs.readdir(
-      srcComponentsFolder,
-      { withFileTypes: true, encoding: 'utf-8' },
-      (err, files) => {
-        for (const file of files) {
-          if (file.isFile()) {
-            if (path.extname(file.name).toLocaleLowerCase() === '.html') {
-              tags.push(path.basename(file.name, '.html'));
-            }
+  let tags = [];
+  fs.readdir(
+    srcComponentsFolder,
+    { withFileTypes: true, encoding: 'utf-8' },
+    (err, files) => {
+      if (err) {
+        throw console.log('error readdir', err);
+      }
+      for (const file of files) {
+        // console.log(file);
+        if (file.isFile) {
+          if (path.extname(file.name).toLocaleLowerCase() === '.html') {
+            tags.push(path.basename(file.name, path.extname(file.name)));
           }
         }
-        const gen = tagReplacing(tags, templateContent);
-        doit(gen);
       }
-    );
-  });
+
+      fs.copyFile(srcTemplateHtml, distHtml, (err) => {
+        if (err) {
+          throw console.log('error copyFile', err);
+        }
+        fs.readFile(distHtml, 'utf-8', (err, content) => {
+
+          if (err) {
+            throw console.log('error readfile', err);
+          }
+          for (const tag of tags) {
+            if (content.includes(`{{${tag}}}`)) {
+              fs.readFile(
+                path.join(srcComponentsFolder, `${tag}.html`),
+                'utf-8',
+                (err, data) => {
+
+                  if (err) {
+                    throw console.log('error readFile', err);
+                  }
+                  content = content.replace(`{{${tag}}}`, data);
+
+                  fs.rm(distHtml, (err) => {
+                    if (err) {
+                      throw console.log('error rm File', err);
+                    }
+                    const distHtmlWS = fs.createWriteStream(distHtml, 'utf-8');
+                    distHtmlWS.write(content);
+                  });
+                }
+              );
+            }
+          }
+        });
+      });
+    }
+  );
 }
