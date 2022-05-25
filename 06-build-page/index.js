@@ -12,17 +12,20 @@ const srcStyleFolder = path.resolve(__dirname, 'styles');
 const srcComponentsFolder = path.resolve(__dirname, 'components');
 const srcTemplateHtml = path.resolve(__dirname, 'template.html');
 
-mergeStyles();
-createDir(distAssetsFolder, false, copyAssets);
 createDir(distProjectFolder, false, makeHTML);
+createDir(distAssetsFolder, false, copyAssets);
+mergeStyles();
 
 function createDir(folderName, doItRecursive, callBack) {
+
   fs.access(folderName, (err) => {
     if (err) {
       if (err.code === 'ENOENT') {
-        fs.mkdir(folderName, { recursive: doItRecursive }, (err) => {
-          if (err) {
-            throw console.log(' myError creating file ', folderName, err);
+        fs.mkdir(folderName, { recursive: doItRecursive }, (errMkdir) => {
+          if (errMkdir) {
+            if (errMkdir !== 'EEXIST') {
+              throw console.log(' myError creating file ', folderName, errMkdir);
+            }
           }
         });
       }
@@ -47,8 +50,7 @@ function mergeStyles() {
     }
 
     fs.readdir(
-      srcStyleFolder,
-      { withFileTypes: false, encoding: 'utf-8' },
+      srcStyleFolder, { withFileTypes: false, encoding: 'utf-8' },
       (err, files) => {
         if (err) {
           if (err.code !== 'ENOENT') {
@@ -89,8 +91,7 @@ function copyFiles(from, to) {
 //!! copy assets
 function copyDirAssets(srcURI, distURI) {
   fs.readdir(
-    srcURI,
-    { withFileTypes: true, encoding: 'utf-8' },
+    srcURI, { withFileTypes: true, encoding: 'utf-8' },
     (err, files) => {
       if (err) {
         if (err.code !== 'ENOENT') {
@@ -120,10 +121,10 @@ function copyAssets() {
 }
 
 function makeHTML() {
+
   let tags = [];
   fs.readdir(
-    srcComponentsFolder,
-    { withFileTypes: true, encoding: 'utf-8' },
+    srcComponentsFolder, { withFileTypes: true, encoding: 'utf-8' },
     (err, files) => {
       if (err) {
         throw console.log('error readdir', err);
