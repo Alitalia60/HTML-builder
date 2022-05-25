@@ -15,9 +15,10 @@ fs.readdir(secretFolder, { withFileTypes: true, encoding: 'utf-8' }, (err, files
           throw console.log('myError stats', err.code);
         }
 
-        console.log(`${path.basename(file.name, path.extname(file.name))} - ${path.extname(file.name).replace('.','')} - ${stats.size}`);
+        console.log(`${path.basename(file.name, path.extname(file.name))} - ${path.extname(file.name).replace('.','')} - ${stats.size/1000}kb`);
       });
 
     }
   }
 });
+yy
